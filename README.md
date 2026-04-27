@@ -13,6 +13,25 @@ This package solves the automation gap for Google Slides:
 
 Perfect for automated reporting, progress dashboards, and transforming analysis outputs into stakeholder-ready presentations.
 
+## Quick start (Claude Code plugin)
+
+If you use Claude Code, install the plugin and let the bundled setup skill walk you through everything:
+
+```
+/plugin marketplace add jorgebotas/gslides-claudecode
+/plugin install gslides-claudecode
+```
+
+Then in Claude Code:
+
+```
+> help me set up google slides
+```
+
+The `gslides-setup` skill activates, asks which installer you use (`uv`, `pip`, `conda`, `poetry`, `pipx`), and walks you through installing the Python package, creating the GCP project, enabling APIs, generating a service account, sharing a deck, and verifying the connection.
+
+For the manual setup (without Claude Code), follow the guide below.
+
 ## Prerequisites
 
 - **Python 3.8+**
@@ -260,32 +279,11 @@ gslides test {presentation_id}
 
 ## Claude Code Integration
 
-This repo doubles as a **Claude Code plugin** that bundles two skills and one agent:
+The plugin (installed via the [Quick start](#quick-start-claude-code-plugin) above) bundles:
 
-- **gslides-setup** (skill) — walks you through GCP project creation, API enablement, service account + key download, sharing a deck, and verifying the connection. Asks which installer you use (`uv`, `pip`, `conda`, `poetry`, `pipx`) and tailors the commands accordingly.
-- **gslides-report** (skill) — generates progress/result slide decks from figures and project context.
-- **gslides-builder** (agent) — dedicated agent for all slide operations in a project.
-
-### Install as a plugin
-
-From any Claude Code session:
-
-```
-/plugin marketplace add jorgebotas/gslides-claudecode
-/plugin install gslides-claudecode@gslides-claudecode
-```
-
-This makes the skills and agent discoverable. The Python package (`gslides-claudecode`) is **not** installed automatically — the `gslides-setup` skill will prompt for your preferred installer and give you the right command when you trigger it.
-
-### Trigger the setup skill
-
-After installing the plugin, in Claude Code:
-
-```
-> help me set up google slides
-```
-
-The `gslides-setup` skill activates and walks you through everything, including the `pip`/`uv`/`conda`/`poetry`/`pipx` install step.
+- **gslides-setup** (skill) — walks you through installer choice, GCP project, API enablement, service account + key, deck sharing, and verification.
+- **gslides-report** (skill) — generates progress/result decks from figures and project context.
+- **gslides-builder** (agent) — dedicated agent for slide operations in a project.
 
 ### Manual install (without the plugin system)
 
