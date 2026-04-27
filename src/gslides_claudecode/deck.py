@@ -82,10 +82,17 @@ class Deck:
         image_url: Optional[str] = None,
         image_path: Optional[Union[str, Path]] = None,
         speaker_notes: Optional[str] = None,
+        max_dimension: Optional[int] = 1600,
     ) -> str:
-        """Append an image slide to presentation."""
+        """Append an image slide to presentation.
+
+        Local images are auto-downscaled to max_dimension px (longest edge)
+        before upload to stay under the Slides API's ~2 MB image limit.
+        Pass max_dimension=None to disable downscaling.
+        """
         return self.builder.append_image(
-            self.presentation_id, title, image_url, image_path, speaker_notes
+            self.presentation_id, title, image_url, image_path, speaker_notes,
+            max_dimension=max_dimension,
         )
 
     def append_table(

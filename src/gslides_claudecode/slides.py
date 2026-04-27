@@ -1,12 +1,25 @@
 """Slide creation utilities for Google Slides."""
 
+import tempfile
 import uuid
 from pathlib import Path
 from typing import List, Optional, Union
 
+from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaFileUpload
 
 from .notes import set_speaker_notes
+
+DEFAULT_MAX_IMAGE_DIMENSION = 1600
+SERVICE_ACCOUNT_QUOTA_HINT = (
+    "Service accounts have zero Google Drive storage quota and cannot upload files. "
+    "Workarounds (pick one):\n"
+    "  1. Host the image somewhere public and pass image_url= instead of image_path= "
+     "(GitHub raw URLs work well; use a commit-pinned URL like "
+     ".../<sha>/image.png to defeat CDN caching).\n"
+    "  2. Use a Google Workspace Shared Drive (requires Workspace).\n"
+    "  3. Authenticate as a user via OAuth instead of a service account."
+)
 
 
 class SlideBuilder:
@@ -122,6 +135,7 @@ class SlideBuilder:
         image_url: Optional[str] = None,
         image_path: Optional[Union[str, Path]] = None,
         speaker_notes: Optional[str] = None,
+        max_dimension: Optional[int] = DEFAULT_MAX_IMAGE_DIMENSION,
     ) -> str:
         """Append an image slide to presentation.
 
@@ -131,13 +145,12 @@ class SlideBuilder:
             image_url: Public URL of image (mutually exclusive with image_path)
             image_path: Local file path to upload (mutually exclusive with image_url)
             speaker_notes: Optional speaker notes text
+            max_dimension: Downscale local images so longest edge is at most this
+                many pixels before uploading. Slides rejects images above ~2 MB.
+                Pass None to disable. Default 1600px.
 
         Returns:
             ID of the created slide
-
-        Raises:
-            ValueError: If neither or both image_url and image_path provided
-            RuntimeError: If image_path provided but no Drive service available
         """
         if not bool(image_url) ^ bool(image_path):
             raise ValueError("Provide exactly one of image_url or image_path")
@@ -148,9 +161,8 @@ class SlideBuilder:
         slide_id = f"slide_{uuid.uuid4().hex[:12]}"
         title_id = f"title_{uuid.uuid4().hex[:12]}"
 
-        # Upload local file to Drive if needed
         if image_path:
-            image_url = self._upload_image_to_drive(image_path)
+            image_url = self._upload_image_to_drive(image_path, max_dimension)
 
         requests = [
             {
@@ -277,28 +289,61 @@ class SlideBuilder:
 
         return slide_id
 
-    def _upload_image_to_drive(self, image_path: Union[str, Path]) -> str:
-        """Upload local image to Drive and return public URL."""
-        image_path = Path(image_path)
+    def _upload_image_to_drive(
+        self, image_path: Union[str, Path], max_dimension: Optional[int]
+    ) -> str:
+        """Upload local image to Drive and return public URL.
 
+        Downscales first if max_dimension is set and Pillow is available.
+        Raises a clear error if the SA has no Drive quota.
+        """
+        image_path = Path(image_path)
         if not image_path.exists():
             raise FileNotFoundError(f"Image file not found: {image_path}")
 
-        # Upload file to Drive
-        media = MediaFileUpload(str(image_path), resumable=True)
-        file_metadata = {"name": image_path.name}
+        upload_path, tmp_dir = _maybe_downscale(image_path, max_dimension)
+        try:
+            media = MediaFileUpload(str(upload_path), resumable=True)
+            file_metadata = {"name": image_path.name}
+            try:
+                file = (
+                    self.drive.files()
+                    .create(body=file_metadata, media_body=media, fields="id")
+                    .execute()
+                )
+            except HttpError as e:
+                if "storageQuotaExceeded" in str(e) or "storage quota" in str(e).lower():
+                    raise RuntimeError(SERVICE_ACCOUNT_QUOTA_HINT) from e
+                raise
+            file_id = file["id"]
 
-        file = (
-            self.drive.files()
-            .create(body=file_metadata, media_body=media, fields="id")
-            .execute()
-        )
-        file_id = file.get("id")
+            self.drive.permissions().create(
+                fileId=file_id, body={"role": "reader", "type": "anyone"}
+            ).execute()
 
-        # Make file publicly readable
-        self.drive.permissions().create(
-            fileId=file_id, body={"role": "reader", "type": "anyone"}
-        ).execute()
+            return f"https://drive.google.com/uc?id={file_id}"
+        finally:
+            if tmp_dir is not None:
+                tmp_dir.cleanup()
 
-        # Return public Drive URL
-        return f"https://drive.google.com/uc?id={file_id}"
+
+def _maybe_downscale(image_path: Path, max_dimension: Optional[int]):
+    """Return (path_to_upload, tmp_dir_or_None). tmp_dir must be cleaned up."""
+    if max_dimension is None:
+        return image_path, None
+    try:
+        from PIL import Image
+    except ImportError:
+        return image_path, None
+
+    with Image.open(image_path) as img:
+        longest = max(img.size)
+        if longest <= max_dimension:
+            return image_path, None
+        scale = max_dimension / longest
+        new_size = (int(img.size[0] * scale), int(img.size[1] * scale))
+        resized = img.resize(new_size, Image.LANCZOS)
+        tmp_dir = tempfile.TemporaryDirectory()
+        out_path = Path(tmp_dir.name) / image_path.name
+        resized.save(out_path, optimize=True)
+        return out_path, tmp_dir

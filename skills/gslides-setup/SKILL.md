@@ -150,6 +150,13 @@ Presentation ID: 1AbCdEfGhIjKlMnOpQrStUvWxYz
 2. Verify the presentation is shared with the service account
 3. Ensure the presentation wasn't deleted or moved
 
+## Known limitations to mention during setup
+
+Before the user tries `gslides image`, flag these so they aren't surprised:
+
+1. **Service accounts cannot upload local images.** The Drive quota is zero; `image_path=` uploads fail with a clear error. Tell the user to either host images publicly (GitHub raw with a commit-pinned URL works well — use `/<sha>/image.png`, not `/main/image.png`, to defeat Google's image CDN caching) and use `image_url=`, or use a Google Workspace Shared Drive, or switch to OAuth auth.
+2. **Images must be ≤ ~2 MB.** The library auto-downscales local images to 1600 px longest edge via Pillow. For `image_url=` sources the user must pre-size.
+
 ## Next steps
 
 Once setup is complete, users can:

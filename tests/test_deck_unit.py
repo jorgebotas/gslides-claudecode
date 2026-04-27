@@ -114,7 +114,8 @@ def test_append_image_delegates_to_builder(deck):
         result = deck.append_image("Title", image_url="http://example.com/img.jpg", speaker_notes="Notes")
 
         mock_append.assert_called_once_with(
-            "test_presentation_id", "Title", "http://example.com/img.jpg", None, "Notes"
+            "test_presentation_id", "Title", "http://example.com/img.jpg", None, "Notes",
+            max_dimension=1600,
         )
         assert result == "slide_789"
 

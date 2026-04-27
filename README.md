@@ -246,9 +246,15 @@ gslides test {presentation_id}
 
 ### Image Upload Issues
 
-**Local files**: Images uploaded via `image_path` parameter are automatically uploaded to Google Drive and made publicly readable. This requires:
-- Google Drive API enabled on your project
-- Service account has Drive API access (included in required scopes)
+**Service accounts cannot upload images.** `append_image(image_path=...)` tries to put the file in the service account's Drive, which has zero storage quota → Google returns `storageQuotaExceeded` 403. This cannot be worked around by sharing a folder: files created by an SA are always owned by the SA, regardless of `parents`. Workarounds:
+
+1. **Host the image publicly and pass `image_url=` instead.** GitHub raw URLs work well. Use a commit-pinned URL (`/<sha>/image.png`, not `/main/image.png`) because Google's image CDN caches aggressively and may serve stale bytes for `/main/`.
+2. **Google Workspace Shared Drive.** Files are owned by the Drive itself (not the SA), so the quota doesn't apply. Requires Workspace.
+3. **OAuth user flow.** Auth as a regular user and use their Drive quota.
+
+The package raises a clear `RuntimeError` with these three options when it detects a quota 403.
+
+**Image size limit (~2 MB)**: The Slides API rejects images larger than roughly 2 MB with `The provided image is too large`. `append_image(image_path=...)` auto-downscales local images to a max longest edge of 1600 px (using Pillow) before uploading. Override with `max_dimension=<px>` or disable with `max_dimension=None`. For `image_url=`, you're responsible for serving an appropriately-sized image yourself.
 
 **Public URLs**: Images via `image_url` parameter must be publicly accessible. Google Slides cannot access:
 - Local file paths (like `file:///Users/...`)
