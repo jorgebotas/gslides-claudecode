@@ -11,8 +11,8 @@
       "description": "Generate Google Slides presentations from Claude Code using a service account. Append text, bullets, images, tables, and speaker notes to user-owned decks.",
       "category": "productivity",
       "source": {
-        "source": "github",
-        "repo": "jorgebotas/gslides-claudecode"
+        "source": "url",
+        "url": "https://github.com/jorgebotas/gslides-claudecode.git"
       },
       "homepage": "https://github.com/jorgebotas/gslides-claudecode"
     }
