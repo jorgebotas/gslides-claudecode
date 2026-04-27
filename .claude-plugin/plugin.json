@@ -1,0 +1,8 @@
+{
+  "name": "gslides-claudecode",
+  "description": "Generate Google Slides presentations from Claude Code using a service account. Append text, bullets, images, tables, and speaker notes to user-owned decks.",
+  "author": {
+    "name": "jorgebotas"
+  },
+  "homepage": "https://github.com/jorgebotas/gslides-claudecode"
+}

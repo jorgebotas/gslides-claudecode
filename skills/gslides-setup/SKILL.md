@@ -19,6 +19,8 @@ Trigger this skill when users mention:
 
 ## Setup Process
 
+**Before starting step 3**, ask the user which Python installer they use (options: `uv`, `pip`, `conda`/`mamba`, `poetry`, `pipx`). Remember the answer and use it for every install/venv command throughout the walkthrough. If they don't know, default to `pip`.
+
 ### 1. Create GCP Project and Enable APIs
 
 Guide the user to:
@@ -56,13 +58,24 @@ Guide the user to:
 
 ### 3. Install gslides-claudecode
 
-```bash
-# If using uv (recommended)
-uv pip install gslides-claudecode
+Use the command that matches the user's chosen installer:
 
-# Or with regular pip
-pip install gslides-claudecode
-```
+| Installer | Command |
+|-----------|---------|
+| `uv` | `uv pip install gslides-claudecode` (or `uv add gslides-claudecode` inside a uv-managed project) |
+| `pip` | `pip install gslides-claudecode` |
+| `conda` / `mamba` | `pip install gslides-claudecode` (inside the active conda env — the package isn't on conda-forge yet) |
+| `poetry` | `poetry add gslides-claudecode` |
+| `pipx` | `pipx install gslides-claudecode` (isolates the `gslides` CLI globally) |
+
+If the user hasn't created an environment yet, suggest one using their chosen tool before installing:
+
+| Installer | Env command |
+|-----------|-------------|
+| `uv` | `uv venv && source .venv/bin/activate` |
+| `pip` | `python -m venv .venv && source .venv/bin/activate` |
+| `conda` | `conda create -n gslides python=3.11 && conda activate gslides` |
+| `poetry` | `poetry init` (if not already in a project) |
 
 ### 4. Set up credentials
 

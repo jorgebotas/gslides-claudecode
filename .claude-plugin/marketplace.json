@@ -1,0 +1,17 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "gslides-claudecode",
+  "description": "Google Slides automation for Claude Code",
+  "owner": {
+    "name": "jorgebotas"
+  },
+  "plugins": [
+    {
+      "name": "gslides-claudecode",
+      "description": "Generate Google Slides presentations from Claude Code using a service account. Append text, bullets, images, tables, and speaker notes to user-owned decks.",
+      "category": "productivity",
+      "source": ".",
+      "homepage": "https://github.com/jorgebotas/gslides-claudecode"
+    }
+  ]
+}

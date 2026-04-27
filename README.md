@@ -260,18 +260,42 @@ gslides test {presentation_id}
 
 ## Claude Code Integration
 
-This package includes built-in Claude Code integration for AI-assisted slide generation:
+This repo doubles as a **Claude Code plugin** that bundles two skills and one agent:
 
-### Skills (`.claude/skills/`)
+- **gslides-setup** (skill) — walks you through GCP project creation, API enablement, service account + key download, sharing a deck, and verifying the connection. Asks which installer you use (`uv`, `pip`, `conda`, `poetry`, `pipx`) and tailors the commands accordingly.
+- **gslides-report** (skill) — generates progress/result slide decks from figures and project context.
+- **gslides-builder** (agent) — dedicated agent for all slide operations in a project.
 
-- **gslides-setup**: Interactive setup guide for Google Cloud APIs, service accounts, and troubleshooting
-- **gslides-report**: Automatically generates progress reports and result presentations from project data
+### Install as a plugin
 
-### Agent (`.claude/agents/`)
+From any Claude Code session:
 
-- **gslides-builder**: Specialized agent for all Google Slides operations, including batch slide generation and automated reporting workflows
+```
+/plugin marketplace add jorgebotas/gslides-claudecode
+/plugin install gslides-claudecode@gslides-claudecode
+```
 
-To use these in your Claude Code projects, the package installation automatically makes them available. Claude will suggest using these skills when appropriate, or you can invoke them directly.
+This makes the skills and agent discoverable. The Python package (`gslides-claudecode`) is **not** installed automatically — the `gslides-setup` skill will prompt for your preferred installer and give you the right command when you trigger it.
+
+### Trigger the setup skill
+
+After installing the plugin, in Claude Code:
+
+```
+> help me set up google slides
+```
+
+The `gslides-setup` skill activates and walks you through everything, including the `pip`/`uv`/`conda`/`poetry`/`pipx` install step.
+
+### Manual install (without the plugin system)
+
+If you'd rather drop the assets into `~/.claude/` by hand:
+
+```bash
+git clone https://github.com/jorgebotas/gslides-claudecode
+cp -r gslides-claudecode/skills/* ~/.claude/skills/
+cp gslides-claudecode/agents/gslides-builder.md ~/.claude/agents/
+```
 
 ## License
 
