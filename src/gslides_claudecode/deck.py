@@ -102,3 +102,22 @@ class Deck:
         return self.builder.append_table(
             self.presentation_id, title, rows, speaker_notes
         )
+
+    def append_section_header(
+        self,
+        title: str,
+        subtitle: Optional[str] = None,
+        background_color: Optional[str] = "#4285F4",
+        text_color: str = "#FFFFFF",
+        speaker_notes: Optional[str] = None,
+    ) -> str:
+        """Append a section divider slide with large centered title.
+
+        Pass background_color=None for no fill. Defaults to Google blue
+        (#4285F4) with white text — good for report date dividers.
+        """
+        return self.builder.append_section_header(
+            self.presentation_id, title, subtitle,
+            background_color=background_color, text_color=text_color,
+            speaker_notes=speaker_notes,
+        )

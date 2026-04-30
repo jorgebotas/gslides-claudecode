@@ -5,7 +5,7 @@ import uuid
 
 import pytest
 
-from gslides_claudecode.slides import SlideBuilder
+from gslides_claudecode.slides import SlideBuilder, _hex_to_rgb_color
 
 
 @pytest.fixture
@@ -149,3 +149,71 @@ def test_append_table_inconsistent_columns(slide_builder):
     rows = [["A", "B"], ["C", "D", "E"]]  # Different column counts
     with pytest.raises(ValueError, match="same number of columns"):
         slide_builder.append_table("test_id", "Title", rows)
+
+def test_hex_to_rgb_color_valid():
+    assert _hex_to_rgb_color("#000000") == {"red": 0.0, "green": 0.0, "blue": 0.0}
+    white = _hex_to_rgb_color("#FFFFFF")
+    assert white["red"] == 1.0 and white["green"] == 1.0 and white["blue"] == 1.0
+    # works without leading #
+    assert _hex_to_rgb_color("4285F4")["red"] == pytest.approx(66 / 255.0)
+
+
+def test_hex_to_rgb_color_invalid():
+    with pytest.raises(ValueError):
+        _hex_to_rgb_color("#12345")  # wrong length
+    with pytest.raises(ValueError):
+        _hex_to_rgb_color("#ZZZZZZ")  # non-hex
+
+
+def test_append_section_header_with_background(slide_builder, mock_services):
+    slides_service, _ = mock_services
+    slides_service.presentations().get().execute.return_value = {
+        "pageSize": {"width": {"magnitude": 9144000}, "height": {"magnitude": 5143500}}
+    }
+
+    slide_builder.append_section_header("pid", "Week 12", subtitle="2026-04-27")
+
+    call_args = slides_service.presentations().batchUpdate.call_args
+    requests = call_args.kwargs["body"]["requests"]
+
+    req_types = [list(r.keys())[0] for r in requests]
+    assert req_types[0] == "createSlide"
+    assert "updatePageProperties" in req_types  # background applied
+    # Title + subtitle each produce createShape + insertText + updateTextStyle + updateParagraphStyle
+    assert req_types.count("createShape") == 2
+    assert req_types.count("insertText") == 2
+
+    bg_req = next(r for r in requests if "updatePageProperties" in r)
+    rgb = bg_req["updatePageProperties"]["pageProperties"]["pageBackgroundFill"]["solidFill"]["color"]["rgbColor"]
+    assert rgb["red"] == pytest.approx(66 / 255.0)  # default #4285F4
+
+
+def test_append_section_header_no_background(slide_builder, mock_services):
+    slides_service, _ = mock_services
+    slides_service.presentations().get().execute.return_value = {
+        "pageSize": {"width": {"magnitude": 9144000}, "height": {"magnitude": 5143500}}
+    }
+
+    slide_builder.append_section_header("pid", "Intro", background_color=None)
+
+    requests = slides_service.presentations().batchUpdate.call_args.kwargs["body"]["requests"]
+    req_types = [list(r.keys())[0] for r in requests]
+    assert "updatePageProperties" not in req_types
+
+
+def test_append_image_uses_page_size_for_centering(slide_builder, mock_services):
+    slides_service, _ = mock_services
+    slides_service.presentations().get().execute.return_value = {
+        "pageSize": {"width": {"magnitude": 9144000}, "height": {"magnitude": 5143500}}
+    }
+
+    slide_builder.append_image("pid", "Chart", image_url="https://example.com/x.png")
+
+    requests = slides_service.presentations().batchUpdate.call_args.kwargs["body"]["requests"]
+    img_req = next(r["createImage"] for r in requests if "createImage" in r)
+    size = img_req["elementProperties"]["size"]
+    transform = img_req["elementProperties"]["transform"]
+    # Image width uses page width minus margins
+    assert size["width"]["magnitude"] == 9144000 - 2 * 200000
+    # Horizontally centered: (page_w - img_w) / 2 == margin
+    assert transform["translateX"] == 200000

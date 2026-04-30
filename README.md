@@ -118,7 +118,7 @@ Presentation ID: 1AbCdEfGhIjKlMnOpQrStUvWxYz
 
 ### Command Line Interface
 
-The `gslides` CLI provides five commands for different slide types:
+The `gslides` CLI provides six commands for different slide types:
 
 ```bash
 # Test API connection
@@ -153,7 +153,17 @@ gslides table {presentation_id} \
   --title "Model Comparison" \
   --csv "results/benchmark.csv" \
   --notes "Highlighted model shows best balance of accuracy and speed"
+
+# Add section divider (e.g. to group slides by date in a progress report)
+gslides section {presentation_id} \
+  --title "Week 12 Update" \
+  --subtitle "2026-04-27" \
+  --bg-color "#4285F4"  # default; pass --no-bg for a plain divider
 ```
+
+Image slides are **auto-centered** and sized to fill the slide below the
+title (local images are downscaled to 1600 px on the longest edge to stay
+under the Slides API's ~2 MB limit).
 
 ### Python Library
 
@@ -167,6 +177,13 @@ deck = Deck.from_service_account(
 )
 
 # Add different slide types
+slide_id = deck.append_section_header(
+    title="Week 12 Update",
+    subtitle="2026-04-27",                    # e.g. date for a progress report
+    background_color="#4285F4",               # Google blue; pass None for no fill
+    text_color="#FFFFFF",
+)
+
 slide_id = deck.append_text(
     title="Executive Summary",
     body="Q3 results exceed targets with 15% revenue growth and 94% customer satisfaction.",

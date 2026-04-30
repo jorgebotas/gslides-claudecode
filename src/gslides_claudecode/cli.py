@@ -87,6 +87,24 @@ def cmd_table(args):
         sys.exit(1)
 
 
+def cmd_section(args):
+    """Add a section header slide."""
+    try:
+        deck = Deck.from_service_account(args.key_file, args.presentation_id)
+        bg = None if args.no_bg else args.bg_color
+        slide_id = deck.append_section_header(
+            args.title,
+            subtitle=args.subtitle,
+            background_color=bg,
+            text_color=args.text_color,
+            speaker_notes=args.notes,
+        )
+        print(f"✓ Added section header: {slide_id}")
+    except Exception as e:
+        print(f"✗ Failed to add section header: {e}", file=sys.stderr)
+        sys.exit(1)
+
+
 def create_parser() -> argparse.ArgumentParser:
     """Create command-line argument parser."""
     parser = argparse.ArgumentParser(
@@ -137,6 +155,25 @@ def create_parser() -> argparse.ArgumentParser:
     table_parser.add_argument("--csv", required=True, help="Path to CSV file")
     table_parser.add_argument("--notes", help="Speaker notes")
 
+    # Section header command
+    section_parser = subparsers.add_parser(
+        "section", help="Add section divider slide with optional colored background"
+    )
+    section_parser.add_argument("presentation_id", help="Google Slides presentation ID")
+    section_parser.add_argument("--title", required=True, help="Section title")
+    section_parser.add_argument("--subtitle", help="Optional subtitle (e.g. date)")
+    section_parser.add_argument(
+        "--bg-color", default="#4285F4",
+        help="Background color as #RRGGBB (default #4285F4 Google blue)",
+    )
+    section_parser.add_argument(
+        "--no-bg", action="store_true", help="No background fill (overrides --bg-color)"
+    )
+    section_parser.add_argument(
+        "--text-color", default="#FFFFFF", help="Text color as #RRGGBB (default white)"
+    )
+    section_parser.add_argument("--notes", help="Speaker notes")
+
     return parser
 
 
@@ -156,6 +193,7 @@ def main():
         "bullets": cmd_bullets,
         "image": cmd_image,
         "table": cmd_table,
+        "section": cmd_section,
     }
 
     handler = command_handlers.get(args.command)
