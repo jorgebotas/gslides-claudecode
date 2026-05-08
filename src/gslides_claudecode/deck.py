@@ -60,6 +60,60 @@ class Deck:
             "presentation_id": self.presentation_id,
         }
 
+    def list_slides(self) -> list[dict]:
+        """List every slide in the presentation.
+
+        Returns:
+            List of dicts with keys ``object_id`` (stable slide id),
+            ``index`` (0-based position), ``title`` (text from the first
+            TITLE or CENTERED_TITLE placeholder, or "" if none).
+        """
+        presentation = (
+            self.slides_service.presentations()
+            .get(presentationId=self.presentation_id)
+            .execute()
+        )
+        out = []
+        for i, slide in enumerate(presentation.get("slides", [])):
+            title = ""
+            for element in slide.get("pageElements", []):
+                shape = element.get("shape", {})
+                placeholder = shape.get("placeholder", {})
+                ptype = placeholder.get("type", "")
+                if ptype in ("TITLE", "CENTERED_TITLE"):
+                    text_runs = shape.get("text", {}).get("textElements", [])
+                    title = "".join(
+                        run["textRun"]["content"]
+                        for run in text_runs
+                        if "textRun" in run
+                    ).strip()
+                    break
+            out.append({
+                "object_id": slide["objectId"],
+                "index": i,
+                "title": title,
+            })
+        return out
+
+    def delete_slide(self, object_id: str) -> None:
+        """Delete a slide by its objectId (see ``list_slides``)."""
+        self.slides_service.presentations().batchUpdate(
+            presentationId=self.presentation_id,
+            body={"requests": [{"deleteObject": {"objectId": object_id}}]},
+        ).execute()
+
+    def move_slide(self, object_id: str, new_index: int) -> None:
+        """Move a slide to ``new_index`` (0-based)."""
+        self.slides_service.presentations().batchUpdate(
+            presentationId=self.presentation_id,
+            body={"requests": [{
+                "updateSlidesPosition": {
+                    "slideObjectIds": [object_id],
+                    "insertionIndex": new_index,
+                }
+            }]},
+        ).execute()
+
     def append_text(
         self, title: str, body: str, speaker_notes: Optional[str] = None
     ) -> str:
